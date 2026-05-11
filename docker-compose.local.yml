@@ -51,7 +51,7 @@ services:
       - '6432:6432'
 
   redis:
-    image: docker.io/redis:7.2
+    image: docker.io/redis:8.6
     container_name: backend_local_redis
     restart: unless-stopped
     volumes:
