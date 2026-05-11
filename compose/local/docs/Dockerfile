@@ -1,0 +1,60 @@
+# define an alias for the specific python version used in this file.
+FROM docker.io/python:3.14-slim-bookworm AS python
+
+
+# Python build stage
+FROM python AS python-build-stage
+
+ARG BUILD_ENVIRONMENT=local
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  build-essential \
+  libpq-dev \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/*
+
+# Requirements are installed here to ensure they will be cached.
+COPY ./requirements .
+
+# Create Python Dependency and Sub-Dependency Wheels.
+RUN pip wheel --wheel-dir /usr/src/app/wheels \
+  -r ${BUILD_ENVIRONMENT}.txt
+
+
+# Python 'run' stage
+FROM python AS python-run-stage
+
+ARG BUILD_ENVIRONMENT
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  # To run the Makefile
+  make \
+  # psycopg dependencies
+  libpq-dev \
+  # Translations dependencies
+  gettext \
+  # Uncomment below lines to enable Sphinx output to latex and pdf
+  # texlive-latex-recommended \
+  # texlive-fonts-recommended \
+  # texlive-latex-extra \
+  # latexmk \
+  # cleaning up unused files
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/*
+
+# copy python dependency wheels from python-build-stage
+COPY --from=python-build-stage /usr/src/app/wheels /wheels/
+
+# use wheels to install python dependencies
+RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
+  && rm -rf /wheels/
+
+COPY . /app
+
+COPY ./compose/local/docs/start /start-docs
+RUN sed -i 's/\r$//g' /start-docs
+RUN chmod +x /start-docs
+
+WORKDIR /docs
