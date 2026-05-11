@@ -19,8 +19,7 @@ services:
       - pgbouncer
       - redis
     env_file:
-      - ./.envs/.production/.django
-      - ./.envs/.production/.postgres
+      - ./.env
     command: /start
     deploy:
       resources:
@@ -44,7 +43,7 @@ services:
       - production_postgres_data_backups:/backups
     restart: unless-stopped
     env_file:
-      - ./.envs/.production/.postgres
+      - ./.env
 
   pgbouncer:
     build:
@@ -53,7 +52,7 @@ services:
     image: backend_production_pgbouncer
     restart: unless-stopped
     env_file:
-      - ./.envs/.production/.postgres
+      - ./.env
     deploy:
       resources:
         reservations:
@@ -75,7 +74,7 @@ services:
       - django
     restart: unless-stopped
     env_file:
-      - ./.envs/.production/.django
+      - ./.env
     deploy:
       resources:
         reservations:
@@ -84,10 +83,6 @@ services:
         limits:
           cpus: ${TRAEFIK_CPU:-1}
           memory: ${TRAEFIK_RAM:-1g}
-    ports:
-      - '0.0.0.0:80:80'
-      - '0.0.0.0:443:443'
-      - '0.0.0.0:5555:5555'
 
   redis:
     image: docker.io/redis:7.2
